@@ -91,6 +91,8 @@ class TableView(object):
     file_name  = ""
     sheet_rows = 0
     sheet_cols = 0
+    current_row_index = 1
+    current_col_index = 1
     
     def __init__(self, file_name = "", sheet_name = ""):
         if not file_name:
@@ -133,6 +135,129 @@ class TableView(object):
         
         return True
     
+    def getSheetNames(self):
+        '''
+        Check the each sheet name by a list
+        '''
+        return self.work_book.sheet_names()
+    
+    def getRowNumbers(self):
+        '''
+        Get the numbers of rows of specific sheet
+        '''
+        return self.sheet_rows
+    
+    def getColNumbers(self):
+        '''
+        Get the number of cols of specific sheet
+        '''
+        return self.sheet_cols
+    
+    def isReady(self):
+        '''
+        Make sure the excel file has been opened, if it is, return True,
+        else return False
+        '''
+        return self.ready_flag
+    
+    def getFileName(self):
+        '''
+        Return the name of opened excel file
+        '''
+        return self.file_name
+    
+    def getLineRow(self, num):
+        '''
+        Get the specific number row's value of the sheet
+        If the row has nothing, return None
+        '''
+        if num > self.getRowNumbers():
+            return None
+        return self.sheet.row_values(num)
+    
+    def getLineCol(self, num):
+        '''
+        Get the specific number col's value of the sheet
+        If the column has nothing, return None
+        '''
+        if num > self.getColNumbers():
+            return None
+        return self.sheet.col_values(num)
+    
+    def getCell(self, row, col):
+        '''
+        Get specific cell in the sheet of row & col numbers
+        '''
+        if row <= 0 and row > self.getRowNumbers():
+            return None
+        if col <= 0 and col > self.getColNumbers():
+            return None
+        return self.sheet.cell(row, col).value  
+    
+    def getHorizonTitle(self):
+        '''
+        Get the horizon title of the sheet
+        '''
+        return self.getLineRow(0)
+    
+    def getVerticalTitle(self):
+        '''
+        Get the vertical title of the sheet
+        '''
+        return self.getLineCol(0)
+    
+    def getNextLineRow(self):
+        '''
+        Get next line row of current sheet with increment by one
+        '''
+        if self.current_row_index > self.getRowNumbers():
+            return None
+        temp = self.getLineRow(self.current_row_index)
+        self.current_row_index += 1
+        return temp
+    
+    def getNextLineCol(self):
+        '''
+        Get next line column of current sheet with increment by one
+        '''
+        if self.current_col_index > self.getColNumbers():
+            return None
+        temp = self.getLineCol(self.current_col_index)
+        self.current_col_index += 1
+        return temp
+    
+    def setCurrentRowIndex(self, row):
+        '''
+        Set the current row index of the current sheet
+        '''
+        if row <= 0 and row > self.getRowNumbers():
+            return None
+        self.current_row_index = row
+        return True
+        
+    def setCurrentColIndex(self, col):
+        '''
+        Set the current column index of the current sheet
+        '''
+        if col <= 0 and col > self.getColNumbers():
+            return None
+        self.current_col_index = col
+        return True
+    
+    def resetCurrentRowIndex(self):
+        '''
+        Set the current row index to be zero, make it acquire data
+        from first line row
+        '''
+        self.current_row_index = 1
+        
+    def resetCurrentColIndex(self):
+        '''
+        Set the current column index to be zero, make it acquire data
+        from first line column
+        '''
+        self.current_col_index = 1
+
 ## -----------------------------------------------------------------------------
 ## Test Driver
 def main():
@@ -148,7 +273,28 @@ def main():
     # error = ItemIndexError("excel_tool.py")
     # print error.getErrorString()
     #===========================================================================
-    excel_file = TableView('attendance.xlsx', u'ԭʼ1')
+    excel_file = TableView('attendance.xlsx', u'ԭʼ2')
+    for item in excel_file.getSheetNames():
+        print item, 
+    print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
+    if u'ԭʼ1' in excel_file.getSheetNames():
+        print 'yes'
+    else:
+        print 'no'
+    print 'The sheet 1 has %d cols' % excel_file.getColNumbers()
+    print 'The 1 line is ', excel_file.getLineRow(0)
+    print 'The 2 line is ', excel_file.getLineRow(1)
+    print 'The 3 line is ', excel_file.getLineRow(2)
+    
+    if excel_file.getSheetByName(u"ԭʼ1"):
+        print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
+        print 'The sheet 1 has %d cols' % excel_file.getColNumbers()
+    
+    print 'The (0, 0) cell is ', excel_file.getCell(0, 0)
+    print 'The (0, 1) cell is ', excel_file.getCell(0, 1)
+    print 'The (1, 0) cell is ', excel_file.getCell(1, 0)
+    print 'The (1, 1) cell is ', excel_file.getCell(1, 1)
+    excel_file.getHorizonTitle()
     
     
 if __name__ == "__main__":
