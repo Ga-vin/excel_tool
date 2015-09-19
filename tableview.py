@@ -257,6 +257,18 @@ class TableView(object):
         from first line column
         '''
         self.current_col_index = 1
+        
+    def getCurrentRowIndex(self):
+        '''
+        Return current row index of the current sheet
+        '''
+        return self.current_row_index
+    
+    def getCurrentColIndex(self):
+        '''
+        Return current col index of the current sheet
+        '''
+        return self.current_col_index
 
 ## -----------------------------------------------------------------------------
 ## Test Driver
@@ -295,6 +307,10 @@ def main():
     print 'The (1, 0) cell is ', excel_file.getCell(1, 0)
     print 'The (1, 1) cell is ', excel_file.getCell(1, 1)
     excel_file.getHorizonTitle()
+    print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
+    excel_file.getNextLineRow()
+    excel_file.getNextLineRow()
+    print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
     
     
 if __name__ == "__main__":
