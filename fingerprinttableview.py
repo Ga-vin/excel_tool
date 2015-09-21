@@ -137,7 +137,8 @@ class FingerprintTableView(tableview.TableView):
         '''
         empty_dict = {}
         empty_dict['name'] = record_list[0]
-        empty_dict['record'] = {record_list[1] : record_list[2]}
+        empty_dict['record'] = {record_list[1] : None}
+        empty_dict['record'][record_list[1]] = {'time' : record_list[2], 'absent' : None}
         self.addPersonToList(empty_dict)
         self.person_name_sets.add(record_list[0])
     
@@ -146,9 +147,12 @@ class FingerprintTableView(tableview.TableView):
         Add only date & time to the person list
         '''
         index = self.getPersonIndexByName(name)
-        self.person_lists[index]['record'][date] = ti
+        #=======================================================================
+        # self.person_lists[index]['record'] = {date : None}
+        #=======================================================================
+        self.person_lists[index]['record'][date] = {'time' : ti, 'absent' : None}
     
-    def updatePersonFingerprintInformatioin(self, start_row, end_row, choice_list):
+    def updatePersonFingerprintRecord(self, start_row, end_row, choice_list):
         '''
         According to the fingerprint table's record update the 
         person list information
@@ -179,6 +183,12 @@ class FingerprintTableView(tableview.TableView):
                         self.addDateTimeRecord(name = temp_list[0], date = temp_list[1], ti = temp_list[2])
                 
                 start += 1
+                
+    def updatePersonAbsentRecord(self, start_row, end_row, start_col, end_col):
+        '''
+        Update absent for each body of each day in this monty
+        '''
+        pass
         
 ## -----------------------------------------------------------------------------
 ## Test Driver
@@ -188,12 +198,12 @@ def main():
 
     choice_lists = [u'员工姓名', u'签到日期', u'签到时间']
     
-    excel_file_obj.updatePersonFingerprintInformatioin(1, 100, choice_lists)
+    excel_file_obj.updatePersonFingerprintRecord(1, 100, choice_lists)
     person_list = excel_file_obj.getPersonList()
     for item in person_list:
         print item['name']
         for value in sorted(item['record'].keys()):
-            print value, ' : ', item['record'][value]
+            print value, ' : ', item['record'][value]['time'], " : ", item['record'][value]['absent']
         print '=' * 40
     #===========================================================================
     # for item in excel_file_obj.getHorizonTitle():
