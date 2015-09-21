@@ -139,6 +139,7 @@ class FingerprintTableView(tableview.TableView):
         empty_dict['name'] = record_list[0]
         empty_dict['record'] = {record_list[1] : record_list[2]}
         self.addPersonToList(empty_dict)
+        self.person_name_sets.add(record_list[0])
     
     def addDateTimeRecord(self, name, date, ti):
         '''
@@ -147,7 +148,7 @@ class FingerprintTableView(tableview.TableView):
         index = self.getPersonIndexByName(name)
         self.person_lists[index]['record'][date] = ti
     
-    def updatePersonInformatioin(self, start_row, end_row, choice_list):
+    def updatePersonFingerprintInformatioin(self, start_row, end_row, choice_list):
         '''
         According to the fingerprint table's record update the 
         person list information
@@ -184,14 +185,14 @@ class FingerprintTableView(tableview.TableView):
 def main():
     excel_file_obj = FingerprintTableView("attendance.xls", u"原始1")
     print 'The sheet has %d row, %d col' % (excel_file_obj.getRowNumbers(), excel_file_obj.getColNumbers())
-    print 'The horizontal title is ', 
+
     choice_lists = [u'员工姓名', u'签到日期', u'签到时间']
     
-    excel_file_obj.updatePersonInformatioin(1, 10, choice_lists)
+    excel_file_obj.updatePersonFingerprintInformatioin(1, 100, choice_lists)
     person_list = excel_file_obj.getPersonList()
     for item in person_list:
         print item['name']
-        for value in item['record'].keys():
+        for value in sorted(item['record'].keys()):
             print value, ' : ', item['record'][value]
         print '=' * 40
     #===========================================================================
