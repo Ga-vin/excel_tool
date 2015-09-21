@@ -269,6 +269,7 @@ class TableView(object):
         Return current col index of the current sheet
         '''
         return self.current_col_index
+    
 
 ## -----------------------------------------------------------------------------
 ## Test Driver
