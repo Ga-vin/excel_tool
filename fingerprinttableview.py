@@ -38,6 +38,15 @@ class UpdateIndexError(Exception):
     def getErrorString(self):
         return "<UpdateIndexError> : %s" % self.promt_information
 
+class RecordDateError(Exception):
+    promt_information = ""
+    
+    def __init__(self, info):
+        self.promt_information = info
+    
+    def getErrorString(self):
+        return "<RecordDateError> : %s" % self.promt_information
+    
 ## -----------------------------------------------------------------------------
 ## Class Definition
 class FingerprintTableView(tableview.TableView):
@@ -47,16 +56,21 @@ class FingerprintTableView(tableview.TableView):
     ## 查到的人员信息表
     person_lists = []
     person_name_sets = set()
+    record_month = 1
+    record_year  = 2015
+    record_day   = 1
     
-    def __init__(self, file_name, sheet_name):
+    def __init__(self, file_name, sheet_name, month = 1, year = 2015):
         super(FingerprintTableView, self).__init__(file_name, sheet_name)
+        self.record_month = month
+        self.record_year = year
     
     def mapNameListToIndexList(self, choice_list):
         '''
         Get the sheet title first, then according to the choice_list, get 
         index list of choice_list
         '''
-        title = self.getHorizonTitle()
+        title = self.getHorizonTitle(0)
         temp_list = []
         for item in choice_list:
             try:
@@ -66,6 +80,42 @@ class FingerprintTableView(tableview.TableView):
             except ItemNotExistError, e:
                 print e.getErrorString()
         return temp_list
+    
+    def setCurrentMonth(self, month):
+        '''
+        Set current record month value which is between 1 & 12
+        '''
+        if month > 0  and month < 13:
+            self.record_month = month
+        else:
+            raise RecordDateError("Set current month which should be between 1 and 12")
+        
+    def getCurrentMonth(self):
+        '''
+        Return the record month
+        '''
+        return self.record_month
+        
+    def setCurrentYear(self, year):
+        '''
+        Set current record year value which should be than 1970
+        '''
+        if year > 1970:
+            self.record_year = year
+        else:
+            raise RecordDateError("Set current year which should be than 1970")
+    
+    def getCurrentYear(self):
+        '''
+        Return the record year
+        '''
+        return self.record_year
+    
+    def formatDate(self, day):
+        '''
+        Format a date string with unicode style of xxxx-xx-xx
+        '''
+        return u'%d-%02d-%02d' % (self.getCurrentYear(), self.getCurrentMonth(), day)
     
     def getNextRowRecord(self, choice_list):
         '''
@@ -188,16 +238,45 @@ class FingerprintTableView(tableview.TableView):
         '''
         Update absent for each body of each day in this monty
         '''
-        pass
+        ## 索引异常处理
+        if (start_row < 0) or (end_row < 0) or (start_row > end_row):
+            raise UpdateIndexError("<updatePersonAbsentRecord> start row/end row should be right")
+        if end_row > self.getRowNumbers():
+            raise UpdateIndexError("<updatePersonAbsentRecord> end row should be less than total rows of the sheet")
+        if (start_col < 0) or (end_col < 0) or (start_col > end_col):
+            raise UpdateIndexError("<updatePersonAbsentRecord> start col/end col should be right")
+        if end_col > self.getColNumbers():
+            raise UpdateIndexError("<updatePersonAbsentRecord> end column should be less than total columns of the sheet")
+        
+        start, end = start_row, end_row
+        while True:
+            ## 判断读取信息结束
+            if start > end:
+                break
+            
+            ## 获取一行记录信息
+            absent_record_list = self.getNextLineRow()
+            if not self.isNameExist(absent_record_list[0]):
+                print '<updatePersonAbsentRecord> %s does not exist' % absent_record_list[0]
+            else:
+                person_index = self.getPersonIndexByName(absent_record_list[0])
+            
+            start += 1
         
 ## -----------------------------------------------------------------------------
 ## Test Driver
 def main():
     excel_file_obj = FingerprintTableView("attendance.xls", u"原始1")
     print 'The sheet has %d row, %d col' % (excel_file_obj.getRowNumbers(), excel_file_obj.getColNumbers())
+    title = excel_file_obj.getHorizonTitle(1)
+    print 'The title of the sheet 2 is'
+    for item in excel_file_obj.getHorizonTitle(1):
+        print item, 
+    print
 
+    ## 读取打卡记录
     choice_lists = [u'员工姓名', u'签到日期', u'签到时间']
-    
+     
     excel_file_obj.updatePersonFingerprintRecord(1, 100, choice_lists)
     person_list = excel_file_obj.getPersonList()
     for item in person_list:
@@ -205,13 +284,17 @@ def main():
         for value in sorted(item['record'].keys()):
             print value, ' : ', item['record'][value]['time'], " : ", item['record'][value]['absent']
         print '=' * 40
+
+    ## 读取请假信息
+    excel_file_obj.resetCurrentRowIndex()
+    if excel_file_obj.getSheetByName(u'原始2'):
+        print 'Change to sheet2 Successfully'
+        
     #===========================================================================
-    # for item in excel_file_obj.getHorizonTitle():
-    #     print item,'\t',
     # a = excel_file_obj.getNextRowRecord([u'员工姓名', u'签到日期', u'签到时间'])
     # b = excel_file_obj.getNextRowRecord([u'员工姓名', u'签到日期', u'签到时间'])
     # c = excel_file_obj.getNextRowRecord([u'员工姓名', u'签到日期', u'签到时间'])
-    # 
+    #  
     # for item in a:
     #     print item, '<', item[5:7], '>', '\t',   
     # print 

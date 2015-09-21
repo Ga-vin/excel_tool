@@ -194,11 +194,11 @@ class TableView(object):
             return None
         return self.sheet.cell(row, col).value  
     
-    def getHorizonTitle(self):
+    def getHorizonTitle(self, row):
         '''
         Get the horizon title of the sheet
         '''
-        return self.getLineRow(0)
+        return self.getLineRow(row)
     
     def getVerticalTitle(self):
         '''
