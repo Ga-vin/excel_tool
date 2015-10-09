@@ -154,11 +154,50 @@ class FingerprintTableView(tableview.TableView):
             return None
         return self.person_lists[index]
     
+    def formatSpecificDate(self, year, month, day):
+        '''
+        Format date with specific format of xxxx-xx-xx
+        '''
+        return u'%d-%02d-%02d' % (year, month, day)
+    
     def getPersonList(self):
         '''
         Return the whole person list to user
         '''
         return self.person_lists
+    
+    def getDateListFromHTitle(self):
+        '''
+        Get the date list from the horizontal title of the current sheet
+        '''
+        import re
+        pattern = re.compile(u'\d{1,2}日')
+        
+        ## 得到该张表的水平标题
+        title = self.getHorizonTitle(1)
+        #=======================================================================
+        # for item in title:
+        #     print item, 
+        #=======================================================================
+        
+        date_from_index = -1
+        date_list = []
+        flag = False
+        ## 迭代寻找该列表中的日期列表
+        for key, value in enumerate(title):
+            if pattern.match(value): 
+                if not flag:
+                    flag = True
+                    date_from_index = key
+                    date_list.append(self.formatSpecificDate(self.getCurrentYear(), 
+                                                             self.getCurrentMonth(), 
+                                                             int(title[key][ : title[key].index(u'日')])))
+                else:
+                    date_list.append(self.formatSpecificDate(self.getCurrentYear(),
+                                                             self.getCurrentMonth(),
+                                                             int(title[key][ : title[key].index(u'日')])))  
+        
+        return date_from_index, date_list     
     
     def addPersonToList(self, new_dict):
         '''
@@ -249,6 +288,10 @@ class FingerprintTableView(tableview.TableView):
             raise UpdateIndexError("<updatePersonAbsentRecord> end column should be less than total columns of the sheet")
         
         start, end = start_row, end_row
+        
+        ## 获取该表的头部，读取日期转化后的标准日期列表及日期开始的索引
+        date_from_index, date_list = self.getDateListFromHTitle()
+        
         while True:
             ## 判断读取信息结束
             if start > end:
@@ -256,10 +299,25 @@ class FingerprintTableView(tableview.TableView):
             
             ## 获取一行记录信息
             absent_record_list = self.getNextLineRow()
-            if not self.isNameExist(absent_record_list[0]):
-                print '<updatePersonAbsentRecord> %s does not exist' % absent_record_list[0]
+            
+            ## 确定更新对象的索引
+            person_index = self.getPersonIndexByName(absent_record_list[1])
+            
+            if -1 == person_index:
+                print '<updatePersonAbsentRecord> %s does not exist' % absent_record_list[1]
             else:
-                person_index = self.getPersonIndexByName(absent_record_list[0])
+                for index, item in enumerate(absent_record_list[date_from_index : len(date_list)]):
+                    ## 确定该天对应的日期字符串是否在人员列表中
+                    if not self.person_lists[person_index]['record'].has_key(date_list[index]):
+                        if not item:
+                            self.person_lists[person_index]['record'][date_list[index]] = {'time' : None, 'absent' : None}
+                        else:
+                            self.person_lists[person_index]['record'][date_list[index]] = {'time' : None, 'absent' : item}
+                    else:
+                        if not item:
+                            self.person_lists[person_index]['record'][date_list[index]]['absent'] = None
+                        else:
+                            self.person_lists[person_index]['record'][date_list[index]]['absent'] = item
             
             start += 1
         
@@ -270,25 +328,50 @@ def main():
     print 'The sheet has %d row, %d col' % (excel_file_obj.getRowNumbers(), excel_file_obj.getColNumbers())
     title = excel_file_obj.getHorizonTitle(1)
     print 'The title of the sheet 2 is'
-    for item in excel_file_obj.getHorizonTitle(1):
-        print item, 
-    print
+    #===========================================================================
+    # for item in excel_file_obj.getHorizonTitle(1):
+    #     print item, 
+    # print
+    #===========================================================================
 
     ## 读取打卡记录
     choice_lists = [u'员工姓名', u'签到日期', u'签到时间']
      
-    excel_file_obj.updatePersonFingerprintRecord(1, 100, choice_lists)
+    excel_file_obj.updatePersonFingerprintRecord(1, excel_file_obj.getRowNumbers() - 1, choice_lists)
     person_list = excel_file_obj.getPersonList()
-    for item in person_list:
-        print item['name']
-        for value in sorted(item['record'].keys()):
-            print value, ' : ', item['record'][value]['time'], " : ", item['record'][value]['absent']
-        print '=' * 40
+    #===========================================================================
+    # for item in person_list:
+    #     print item['name']
+    #     for value in sorted(item['record'].keys()):
+    #         print value, ' : ', item['record'][value]['time'], " : ", item['record'][value]['absent']
+    #     print '=' * 40
+    #===========================================================================
 
     ## 读取请假信息
     excel_file_obj.resetCurrentRowIndex()
     if excel_file_obj.getSheetByName(u'原始2'):
         print 'Change to sheet2 Successfully'
+        excel_file_obj.setCurrentYear(2015)
+        excel_file_obj.setCurrentMonth(8)
+        if excel_file_obj.getCurrentRowIndex() < 2:
+            excel_file_obj.setCurrentRowIndex(2)
+        excel_file_obj.updatePersonAbsentRecord(2, excel_file_obj.getRowNumbers() - 1, 0, excel_file_obj.getColNumbers())
+        person_list = excel_file_obj.getPersonList()
+        for person in person_list:
+            print 'Name: %s' % person['name']
+            for item in person['record'].keys():
+                print '\t\tDate: %s Record: %s Absent: %s' % (item, 
+                                                              person['record'][item]['time'], 
+                                                              person['record'][item]['absent'])
+            print '*' * 80
+        #=======================================================================
+        # date_list = excel_file_obj.getDateListFromHTitle()
+        # if date_list:
+        #     for item in date_list:
+        #         print item
+        # else:
+        #     print u'该表为空'
+        #=======================================================================
         
     #===========================================================================
     # a = excel_file_obj.getNextRowRecord([u'员工姓名', u'签到日期', u'签到时间'])
