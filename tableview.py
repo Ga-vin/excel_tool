@@ -15,6 +15,7 @@ import sys
 import openpyxl as pyxl
 import xlrd
 import xlwt
+from xlutils.copy import copy
 
 ## ----------------------------------------------------------------------
 ## Define Exception
@@ -77,6 +78,17 @@ class ItemIndexError(Exception):
     def getErrorString(self):
         return self.promt_information
     
+class SheetNameError(Exception):
+    '''
+    Deal some errors while acquire sheet name failed
+    '''
+    promt_information = ""
+    def __init__(self, promt_info):
+        print '[*] Error in <SheetNameError>: ', promt_info
+
+    def getErrorString(self):
+        return self.promt_information
+    
 ## -----------------------------------------------------------------------------
 ## Class Definition
 class TableView(object):
@@ -85,9 +97,12 @@ class TableView(object):
     Open excel file and get information from the excel file.
     '''
     
-    work_book  = None
-    sheet      = None
-    ready_flag = False
+    work_book        = None
+    write_work_book  = None
+    sheet            = None
+    write_sheet      = None
+    ready_flag       = False
+    write_ready_flag = False
     file_name  = ""
     sheet_rows = 0
     sheet_cols = 0
@@ -114,6 +129,58 @@ class TableView(object):
         ## 获取该sheet对应的总行数和总列数
         self.sheet_rows = self.sheet.nrows
         self.sheet_cols = self.sheet.ncols
+        
+    def writeInitialization(self, sheet_name):
+        '''
+        Initialize the sheet to be writen, before writing,
+        the sheet to be written, should be copy from the sheet
+        to be read.
+        '''
+        if not self.work_book:
+            self.write_ready_flag = False
+            return False
+        
+        ## 在xlrd打开的文件和xlwt写文件之间建立一个通道
+        self.write_work_book = copy(self.work_book)
+        
+        if not sheet_name:
+            raise SheetNameError("The sheet name should be specified")
+        
+        sheet_lists = self.getSheetNames()
+        sheet_index = -1
+        if sheet_name in sheet_lists:
+            sheet_index = sheet_lists.index(sheet_name)
+            
+        if -1 != sheet_index:
+            self.write_sheet = self.write_work_book.get_sheet(sheet_index)
+            self.write_ready_flag = True
+            
+        if self.write_ready_flag:
+            return True
+        else:
+            return False
+    
+    def writeOver(self, file_name = None):
+        '''
+        When finish writing, the file should be saved again according 
+        to the xlrd model opened file
+        '''
+        if self.write_ready_flag:
+            self.write_ready_flag = False
+            self.write_sheet      = None
+            
+            try:
+                if not file_name:
+                    self.write_work_book.save(self.getFileName())
+                else:
+                    self.write_work_book.save(file_name)
+            except IOError, e:
+                print "[*] Save excel file failed"
+                
+            self.write_work_book  = None
+            return True
+        else:
+            return False
         
     def getSheetByName(self, sheet_name):
         '''
@@ -188,11 +255,26 @@ class TableView(object):
         '''
         Get specific cell in the sheet of row & col numbers
         '''
-        if row <= 0 and row > self.getRowNumbers():
+        if row <= 0 or row > self.getRowNumbers():
             return None
-        if col <= 0 and col > self.getColNumbers():
+        if col <= 0 or col > self.getColNumbers():
             return None
         return self.sheet.cell(row, col).value  
+    
+    def setCell(self, row, col, value):
+        '''
+        Set the specific cell with value in row and column
+        '''
+        if row < 0 or row > self.getRowNumbers():
+            return None
+        if col < 0 or col > self.getColNumbers():
+            return None
+         
+        if self.write_ready_flag:
+            self.write_sheet.write(row, col, value)
+            return True
+        else:
+            return False
     
     def getHorizonTitle(self, row):
         '''
@@ -286,33 +368,57 @@ def main():
     # error = ItemIndexError("excel_tool.py")
     # print error.getErrorString()
     #===========================================================================
-    excel_file = TableView('attendance.xlsx', u'原始2')
+#     excel_file = TableView('attendance.xlsx', u'原始2')
+#     for item in excel_file.getSheetNames():
+#         print item, 
+#     print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
+#     if u'原始1' in excel_file.getSheetNames():
+#         print 'yes'
+#     else:
+#         print 'no'
+#     print 'The sheet 1 has %d cols' % excel_file.getColNumbers()
+#     print 'The 1 line is ', excel_file.getLineRow(0)
+#     print 'The 2 line is ', excel_file.getLineRow(1)
+#     print 'The 3 line is ', excel_file.getLineRow(2)
+#     
+#     if excel_file.getSheetByName(u"原始1"):
+#         print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
+#         print 'The sheet 1 has %d cols' % excel_file.getColNumbers()
+#     
+#     print 'The (0, 0) cell is ', excel_file.getCell(0, 0)
+#     print 'The (0, 1) cell is ', excel_file.getCell(0, 1)
+#     print 'The (1, 0) cell is ', excel_file.getCell(1, 0)
+#     print 'The (1, 1) cell is ', excel_file.getCell(1, 1)
+#     excel_file.getHorizonTitle()
+#     print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
+#     excel_file.getNextLineRow()
+#     excel_file.getNextLineRow()
+#     print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
+    excel_file = TableView('person.xls', u'Sheet1')
     for item in excel_file.getSheetNames():
         print item, 
     print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
-    if u'原始1' in excel_file.getSheetNames():
+    if u'Sheet1' in excel_file.getSheetNames():
         print 'yes'
     else:
         print 'no'
-    print 'The sheet 1 has %d cols' % excel_file.getColNumbers()
-    print 'The 1 line is ', excel_file.getLineRow(0)
-    print 'The 2 line is ', excel_file.getLineRow(1)
-    print 'The 3 line is ', excel_file.getLineRow(2)
-    
-    if excel_file.getSheetByName(u"原始1"):
-        print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
-        print 'The sheet 1 has %d cols' % excel_file.getColNumbers()
-    
-    print 'The (0, 0) cell is ', excel_file.getCell(0, 0)
-    print 'The (0, 1) cell is ', excel_file.getCell(0, 1)
-    print 'The (1, 0) cell is ', excel_file.getCell(1, 0)
-    print 'The (1, 1) cell is ', excel_file.getCell(1, 1)
-    excel_file.getHorizonTitle()
-    print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
-    excel_file.getNextLineRow()
-    excel_file.getNextLineRow()
-    print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
-    
+    title = excel_file.getHorizonTitle(0)
+    for item in title:
+        print item, ' ',
+#     excel_file.setCell(3, 0, u'刘壮')
+    try:
+        if not excel_file.writeInitialization(''):
+            print '[*] Write initialization failed'
+            sys.exit()
+    except SheetNameError, e:
+        print '[*] <Error> : %s' % e
+    excel_file.setCell(3, 0, u'樊然')
+    excel_file.setCell(3, 1, u'35')
+    excel_file.setCell(3, 2, u'女')
+    excel_file.setCell(3, 3, u'设计师')
+    if not excel_file.writeOver():
+        print '[*] Write over failed'
+        sys.exit()
     
 if __name__ == "__main__":
     main()

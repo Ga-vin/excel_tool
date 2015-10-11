@@ -327,7 +327,7 @@ def main():
     excel_file_obj = FingerprintTableView("attendance.xls", u"ԭʼ1")
     print 'The sheet has %d row, %d col' % (excel_file_obj.getRowNumbers(), excel_file_obj.getColNumbers())
     title = excel_file_obj.getHorizonTitle(1)
-    print 'The title of the sheet 2 is'
+    print 'The title of the sheet 2 is', title
     #===========================================================================
     # for item in excel_file_obj.getHorizonTitle(1):
     #     print item, 
@@ -359,7 +359,7 @@ def main():
         person_list = excel_file_obj.getPersonList()
         for person in person_list:
             print 'Name: %s' % person['name']
-            for item in person['record'].keys():
+            for item in sorted(person['record'].keys()):
                 print '\t\tDate: %s Record: %s Absent: %s' % (item, 
                                                               person['record'][item]['time'], 
                                                               person['record'][item]['absent'])
