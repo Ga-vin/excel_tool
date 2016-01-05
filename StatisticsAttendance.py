@@ -16,7 +16,7 @@ import time
 import xlrd
 import xlwt
 import openpyxl
-import tableview
+from tableview import TableView
 ## -----------------------------------------------------------------------------
 ## Constants for the whole project
 tool_name = '考勤统计工具 '
@@ -52,6 +52,43 @@ class RecordDateError(Exception):
     def getErrorString(self):
         return "<RecordDateError> : %s" % self.promt_information
 ## -----------------------------------------------------------------------------
+## New Class definition
+class StatisticData(TableView):
+    '''
+    New class which inherits from TableView, can use some features which are
+    defined in base class, which also can extend its functions and features
+    
+    Person dict likes this:
+      {
+                          序号          id        : 0
+                         姓名           name      : None
+                       入职时间    hire_date : None
+                       日期             date      :
+                       {
+                           1日    date_1   : None
+                           2日    date_2   : None
+                           3日    date_3   : None
+                           ........
+                           31日    date_31 : None
+                       }
+                       迟到次数            late_times   : 0
+                       调休次数            off_time     : 0
+                       事假次数            leave_time   : 0
+                       病假次数            sick_time    : 0
+                       上月调休结余 last_rest_off : 0
+                       现调休结余    now_rest_off  : 0
+                       备注                 common        : 0
+     }
+          
+    '''
+    
+    def __init__(self, file_name, sheet_name):
+        '''
+        Constructor function for the class
+        '''
+        super(StatisticData, self).__init__(file_name, sheet_name)
+        self.person_list = []
+        self.person_name_sets = set()
 
 def printToolLogoHeader():
     '''
