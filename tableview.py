@@ -351,22 +351,51 @@ class TableView(object):
         Return current col index of the current sheet
         '''
         return self.current_col_index
+
+def convertTupleToTime(tup):
+    '''
+    Convert a tuple which contains year, month, day, hour, minutes,
+    and second, to a string which likes hour:minute
+    '''
+    tup_cp = xlrd.xldate_as_tuple(tup, 0)
+    tt = ''
+    for item in tup_cp[3:-1]:
+        tt = tt + ":" + str(item)
     
+    return tt.strip(':')   
 
 ## -----------------------------------------------------------------------------
 ## Test Driver
 def main():
-    #===========================================================================
-    # error = OpenFileError("excel_tool.py")
-    # print error.getErrorString()
-    # error = GetHTitleError("excel_tool.py")
-    # print error.getErrorString()
-    # error = GetVTitleError("excel_tool.py")
-    # print error.getErrorString()
-    # error = ItemNameError("excel_tool.py")
-    # print error.getErrorString()
-    # error = ItemIndexError("excel_tool.py")
-    # print error.getErrorString()
+    excel_file = TableView('record_total.xlsx', u'specific')
+    for item in excel_file.getSheetNames():
+        print item, 
+    print '\nThe sheet 1 has %d cols' % excel_file.getColNumbers()
+    print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
+    
+#     print 'The 1 line is ', 
+#     for item in excel_file.getLineRow(0):
+#         print item, ' ', 
+#     print '\nThe 2 line is ', 
+#     for item in excel_file.getLineRow(1):
+#         print item, ' ',
+#     print '\nThe 3 line is ', 
+#     for item in excel_file.getLineRow(2):
+#         print item, ' ', 
+    while True:
+        tup = excel_file.getNextLineRow()
+        if not tup:
+            break
+        
+        for index, item in enumerate(tup):
+            if index < 2 or index > 5:
+                print item,
+            else:
+                if not item:
+                    continue
+                else:
+                    print convertTupleToTime(item), 
+        print
     #===========================================================================
 #     excel_file = TableView('attendance.xlsx', u'原始2')
 #     for item in excel_file.getSheetNames():
@@ -394,31 +423,33 @@ def main():
 #     excel_file.getNextLineRow()
 #     excel_file.getNextLineRow()
 #     print 'current row is %d, current col is %d' % (excel_file.getCurrentRowIndex(), excel_file.getCurrentColIndex())
-    excel_file = TableView('person.xls', u'Sheet1')
-    for item in excel_file.getSheetNames():
-        print item, 
-    print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
-    if u'Sheet1' in excel_file.getSheetNames():
-        print 'yes'
-    else:
-        print 'no'
-    title = excel_file.getHorizonTitle(0)
-    for item in title:
-        print item, ' ',
-#     excel_file.setCell(3, 0, u'刘壮')
-    try:
-        if not excel_file.writeInitialization(''):
-            print '[*] Write initialization failed'
-            sys.exit()
-    except SheetNameError, e:
-        print '[*] <Error> : %s' % e
-    excel_file.setCell(3, 0, u'樊然')
-    excel_file.setCell(3, 1, u'35')
-    excel_file.setCell(3, 2, u'女')
-    excel_file.setCell(3, 3, u'设计师')
-    if not excel_file.writeOver():
-        print '[*] Write over failed'
-        sys.exit()
+## ============================================================================
+#     excel_file = TableView('person.xls', u'Sheet1')
+#     for item in excel_file.getSheetNames():
+#         print item, 
+#     print '\nThe sheet 1 has %d rows' % excel_file.getRowNumbers()
+#     if u'Sheet1' in excel_file.getSheetNames():
+#         print 'yes'
+#     else:
+#         print 'no'
+#     title = excel_file.getHorizonTitle(0)
+#     for item in title:
+#         print item, ' ',
+# #     excel_file.setCell(3, 0, u'刘壮')
+#     try:
+#         if not excel_file.writeInitialization(''):
+#             print '[*] Write initialization failed'
+#             sys.exit()
+#     except SheetNameError, e:
+#         print '[*] <Error> : %s' % e
+#     excel_file.setCell(3, 0, u'刘大壮')
+#     excel_file.setCell(3, 1, u'35')
+#     excel_file.setCell(3, 2, u'女')
+#     excel_file.setCell(3, 3, u'设计师')
+#     if not excel_file.writeOver():
+#         print '[*] Write over failed'
+#         sys.exit()
+## ============================================================================        
     
 if __name__ == "__main__":
     main()
