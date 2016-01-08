@@ -284,7 +284,7 @@ class TableView(object):
         else:
             return False
     
-    def getHorizonTitle(self, row):
+    def getHorizonTitle(self, row = 0):
         '''
         Get the horizon title of the sheet
         '''

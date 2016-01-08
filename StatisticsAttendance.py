@@ -29,6 +29,7 @@ class ItemNotExistError(Exception):
     promt_information = ""
     
     def __init__(self, info):
+        super(ItemNotExistError, self).__init__()
         self.promt_information = info
     
     def getErrorString(self):
@@ -38,6 +39,7 @@ class UpdateIndexError(Exception):
     promt_information = ""
     
     def __init__(self, info):
+        super(UpdateIndexError, self).__init__()
         self.promt_information = info
         
     def getErrorString(self):
@@ -47,6 +49,7 @@ class RecordDateError(Exception):
     promt_information = ""
     
     def __init__(self, info):
+        super(RecordDateError, self).__init__()
         self.promt_information = info
     
     def getErrorString(self):
@@ -63,6 +66,8 @@ class StatisticData(TableView):
                           序号          id        : 0
                          姓名           name      : None
                        入职时间    hire_date : None
+                       年               year      : 0
+                       月              month     : 0                
                        日期             date      :
                        {
                            1日    date_1   : None
@@ -93,6 +98,41 @@ class StatisticData(TableView):
         self.person_name_sets = set()
         self.year = 0
         self.month = 0
+        self.person_total = 0
+        
+    def addPersonNameToSets(self, person_name):
+        '''
+        Add specific name of person to sets, if the person name has been existed
+        in the sets, False will be returned, else the person name will be added
+        to the set, and True will be returned
+        person_name : the name to be added to set
+        '''
+        ## assert (not person_name), "<addPersonNameToSets> : person_name should not be empty"
+        if not person_name:
+            print 'Person name is empty'
+            return False
+#         else:
+#             print 'Person name is not empty'
+#             print person_name
+        
+        if person_name in self.person_name_sets:
+            return False
+        else:
+            self.person_name_sets.add(person_name)
+            self.person_total += 1
+            return True
+        
+    def getPersonNameSets(self):
+        '''
+        Return the set which contains the name sets of person
+        '''
+        return self.person_name_sets
+    
+    def getPersonTotal(self):
+        '''
+        Return the total person has been statistic
+        '''
+        return self.person_total
         
     def generatePersonObj(self):
         '''
@@ -110,7 +150,16 @@ class StatisticData(TableView):
         person['month']         = 0
         person['date']          = dict()
         for i in range(1, 32):
-            person['date']['date_' + str(i)] = None
+            temp_dict               = dict()
+            temp_dict['late']       = 0
+            temp_dict['overwork']   = 0
+            temp_dict['leav_early'] = 0
+            temp_dict['off']        = 0
+            temp_dict['leave']      = 0
+            temp_dict['sick']       = 0
+            temp_dict['annual']     = 0
+            temp_dict['outside']    = None
+            person['date']['date_' + str(i)] = temp_dict
         person['late_times']    = 0
         person['off_time']      = 0
         person['leave_time']    = 0
@@ -136,21 +185,10 @@ class StatisticData(TableView):
         else:
             for kk in person_dict.keys():
                 if type(person_dict[kk]) == type(dict()):
+                    print ' ' * offset, '%-16s'%kk, ":"
                     self.displayPersonObj(person_dict[kk], offset + 4)
                 else:
                     print ' ' * offset, '%-16s'%kk, ":", person_dict[kk]
-    
-    def isLeapYear(self):
-        '''
-        Check if the year is leap year or not
-        @return True if it is , else not
-        '''
-        assert self.year !=0, "<isLeapYear> -> year has not been initialized"
-        
-        if self.year % 400 == 0 or (self.year % 4 == 0 and self.year % 100 != 0):
-            return True
-        else:
-            return False
         
 
 def printToolLogoHeader():
@@ -178,7 +216,6 @@ def main():
     Table = StatisticData("record_total.xlsx", 'specific')
     person = Table.generatePersonObj()
     Table.displayPersonObj(person)
-    
 
     printToolLogoEnd()
 
