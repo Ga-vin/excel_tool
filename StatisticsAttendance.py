@@ -85,10 +85,73 @@ class StatisticData(TableView):
     def __init__(self, file_name, sheet_name):
         '''
         Constructor function for the class
+        @file_name  : the file to be opened to read
+        @sheet_name : the sheet which is in the file to be read information
         '''
         super(StatisticData, self).__init__(file_name, sheet_name)
         self.person_list = []
         self.person_name_sets = set()
+        self.year = 0
+        self.month = 0
+        
+    def generatePersonObj(self):
+        '''
+        Generate person structure which describe the basic information
+        about the person
+        @return the person object has been created and assigned with 
+        initial value
+        '''
+        
+        person = dict()
+        person['id']            = 0
+        person['name']          = None
+        person['hire_date']     = None
+        person['year']          = 0
+        person['month']         = 0
+        person['date']          = dict()
+        for i in range(1, 32):
+            person['date']['date_' + str(i)] = None
+        person['late_times']    = 0
+        person['off_time']      = 0
+        person['leave_time']    = 0
+        person['sick_time']     = 0
+        person['last_rest_off'] = 0
+        person['now_rest_off']  = 0
+        person['common']        = 0
+        
+        return person
+    
+    def displayPersonObj(self, person_dict, offset = 0):
+        '''
+        Print the specific information about the person which has been 
+        passed in to the screen to debug
+        @person_dict : the dict structure which contains the information of 
+                       the person
+        @offset      : the offset which is mainly to print space before
+                       each line
+        '''
+        
+        if not person_dict:
+            print 'Person Dict is Empty'
+        else:
+            for kk in person_dict.keys():
+                if type(person_dict[kk]) == type(dict()):
+                    self.displayPersonObj(person_dict[kk], offset + 4)
+                else:
+                    print ' ' * offset, '%-16s'%kk, ":", person_dict[kk]
+    
+    def isLeapYear(self):
+        '''
+        Check if the year is leap year or not
+        @return True if it is , else not
+        '''
+        assert self.year !=0, "<isLeapYear> -> year has not been initialized"
+        
+        if self.year % 400 == 0 or (self.year % 4 == 0 and self.year % 100 != 0):
+            return True
+        else:
+            return False
+        
 
 def printToolLogoHeader():
     '''
@@ -99,19 +162,23 @@ def printToolLogoHeader():
     print ' ' * 23 + tool_version
     print ' ' * 21 + tool_author
     print ' ' * 70 + tool_copyright
-    print ' ' * 15 + 'Start Time: ' + time.asctime(time.localtime())   
+    print ' ' * 15 + 'Start Time: ' + time.asctime(time.localtime()) 
+    print "\n\n\n"  
 
 def printToolLogoEnd():
     '''
     Print the tail of logo for the software
     '''
-    print ' ' *15 + 'End Time: ' + time.asctime(time.localtime())
+    print ' ' * 15 + 'End Time: ' + time.asctime(time.localtime())
     print '*' * 60     
 
 def main():
     printToolLogoHeader()
     ## Add data flow
-    pass
+    Table = StatisticData("record_total.xlsx", 'specific')
+    person = Table.generatePersonObj()
+    Table.displayPersonObj(person)
+    
 
     printToolLogoEnd()
 

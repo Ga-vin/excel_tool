@@ -25,7 +25,8 @@ class OpenFileError(Exception):
     '''
     promt_information = ""
     def __init__(self, promt_infor):
-        print '[*] Error in <OpenFileError>: ', promt_infor
+        super(OpenFileError, self).__init__()
+        #print '[*] Error in <OpenFileError>: ', promt_infor
         self.promt_information = promt_infor
 
     def getErrorString(self):
@@ -37,7 +38,8 @@ class GetHTitleError(Exception):
     '''
     promt_informatioin = ""
     def __init__(self, promt_info):
-        print '[*] Error in <GetHTitleError>: ', promt_info
+        super(GetHTitleError, self).__init__()
+        #print '[*] Error in <GetHTitleError>: ', promt_info
         self.promt_information = promt_info
 
     def getErrorString(self):
@@ -49,7 +51,8 @@ class GetVTitleError(Exception):
     '''
     promt_information = ""
     def __init__(self, promt_info):
-        print '[*] Error in <GetVTitleError>: ', promt_info
+        super(GetVTitleError, self).__init__()
+        #print '[*] Error in <GetVTitleError>: ', promt_info
         self.promt_information = promt_info
 
     def getErrorString(self):
@@ -61,7 +64,8 @@ class ItemNameError(Exception):
     '''
     promt_information = ""
     def __init__(self, promt_info):
-        print '[*] Error in <ItemNameError>: ', promt_info
+        super(ItemNameError, self).__init__()
+        #print '[*] Error in <ItemNameError>: ', promt_info
         self.promt_information = promt_info
 
     def getErrorString(self):
@@ -73,7 +77,9 @@ class ItemIndexError(Exception):
     '''
     promt_information = ""
     def __init__(self, promt_info):
-        print '[*] Error in <ItemIndexError>: ', promt_info
+        super(ItemIndexError, self).__init__()
+        #print '[*] Error in <ItemIndexError>: ', promt_info
+        self.promt_information = promt_info
 
     def getErrorString(self):
         return self.promt_information
@@ -84,7 +90,9 @@ class SheetNameError(Exception):
     '''
     promt_information = ""
     def __init__(self, promt_info):
-        print '[*] Error in <SheetNameError>: ', promt_info
+        super(SheetNameError, self).__init__()
+        #print '[*] Error in <SheetNameError>: ', promt_info
+        self.promt_information = promt_info
 
     def getErrorString(self):
         return self.promt_information
