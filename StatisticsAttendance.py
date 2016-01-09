@@ -159,6 +159,7 @@ class StatisticData(TableView):
             temp_dict['sick']       = 0
             temp_dict['annual']     = 0
             temp_dict['outside']    = None
+            temp_dict['statistic']  = None
             person['date']['date_' + str(i)] = temp_dict
         person['late_times']    = 0
         person['off_time']      = 0
@@ -214,8 +215,8 @@ def main():
     printToolLogoHeader()
     ## Add data flow
     Table = StatisticData("record_total.xlsx", 'specific')
-    person = Table.generatePersonObj()
-    Table.displayPersonObj(person)
+#     person = Table.generatePersonObj()
+#     Table.displayPersonObj(person)
 
     printToolLogoEnd()
 

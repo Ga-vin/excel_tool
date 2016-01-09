@@ -126,7 +126,7 @@ def addPersonDate(date_string, split_char = '/'):
     class object
     @ If some error happens, None will be returned
     '''
-    if len(date_string) == 0:
+    if not date_string:
         print '[*] Date string is empty'
         return None
     
@@ -134,7 +134,7 @@ def addPersonDate(date_string, split_char = '/'):
         raw_string = date_string.split(split_char)
         date_obj = Date(int(raw_string[0]), int(raw_string[1]), int(raw_string[2]))
     except ValueError, e:
-        print e
+        print '[*] ERROR: ', e
         return None
     return date_obj
 
@@ -220,14 +220,17 @@ def main():
     ## 设置读取数据开始行，便于直接读取下一行
     read_table.setCurrentRowIndex(start_from_row)
     ## 开始读取统计数据
+    last_person_id = 1
     temp = 0
     while True:
-        pass
         try:
             is_new_person = False
-            
             ## 读取一行的数据并转化为一个字典
             person_dict = getSpecificLineData(read_table, read_table_header)
+            
+            if not person_dict[u'姓名']:
+                print '[*] End of the table'
+                break
             
             ## 添加姓名到集合中
             person_id, person_obj_temp = addPersonName(read_table, person_id, person_dict)
@@ -243,6 +246,7 @@ def main():
                 sys.exit()
             ## 如果是新人，则添加年和月
             if is_new_person:
+                is_neww_person = False
                 person_total_list[person_id]['year']  = date_temp.getYear()
                 person_total_list[person_id]['month'] = date_temp.getMonth()
             
@@ -250,7 +254,6 @@ def main():
             work_day = date_temp.getDay()
             if not date_temp.isWeekDay():
                 ## 非工作日，算加班
-                pass
                 overtime = addPersonOvertimeNotWorkday(person_dict[u'签到时间'], person_dict[u'签退时间'])
                 person_total_list[person_id]['date']['date_'+str(work_day)]['late'] = 0
                 person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early'] = 0
@@ -290,26 +293,18 @@ def main():
                 ## 外勤情况
                 person_total_list[person_id]['date']['date_'+str(work_day)]['outside'] = person_dict[u'外勤及其他异常说明']    
                 
-                
-            read_table.displayPersonObj(person_total_list[person_id])
-            sys.exit()
-            # print 'INMAIN', person_dict[u'姓名']
-#             if read_table.addPersonNameToSets(person_dict[u'姓名']):
-#                 person_id += 1
-#                 ## 创建person对象
-#                 person_obj = read_table.generatePersonObj()
-#                 if not person_obj:
-#                     print '[*] Create person object failed'
-#                 person_obj['name'] = person_dict[u'姓名']
-#                 person_obj['id']   = person_id
-            
+            if person_id > last_person_id:
+                last_person_id = person_id
         except (TableObjectEmptyError, TableHeaderEmptyError,\
                 TableDataEndError, TableHeaderLengthError) as e:
             print e.getErrorString()
-        temp += 1
-        if temp > 5:
-            break
-    
+        ## For debug
+#         print work_day, '~'*60
+#         read_table.displayPersonObj(person_total_list[person_id])
+#         temp += 1
+#         if temp > 22:
+#             break
+    print u'共有%d人'%person_id
     ## 打印工具结尾
     StatisticsAttendance.printToolLogoEnd()
 
