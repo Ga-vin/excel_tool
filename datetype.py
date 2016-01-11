@@ -153,6 +153,21 @@ class Date(object):
             return True
         else:
             return False
+
+    def hasDays(self):
+        '''
+        Return the days of the specific month has
+        @ month : specific month to check
+        '''
+        if self.getMonth() in [1, 3, 5, 7, 8, 10, 12]:
+            return int(31)
+        elif self.getMonth() in [4, 6, 9, 11]:
+            return int(30)
+        else:
+            if self.isLeapYear():
+                return int(29)
+            else:
+                return int(28)
         
 def main():
     print 'Normal date object: '

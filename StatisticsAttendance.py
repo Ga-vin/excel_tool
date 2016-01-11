@@ -143,12 +143,12 @@ class StatisticData(TableView):
         '''
         
         person = dict()
-        person['id']            = 0
-        person['name']          = None
-        person['hire_date']     = None
-        person['year']          = 0
-        person['month']         = 0
-        person['date']          = dict()
+        person['id']                = 0
+        person['name']              = None
+        person['hire_date']         = None
+        person['year']              = 0
+        person['month']             = 0
+        person['date']              = dict()
         for i in range(1, 32):
             temp_dict               = dict()
             temp_dict['late']       = 0
@@ -159,15 +159,16 @@ class StatisticData(TableView):
             temp_dict['sick']       = 0
             temp_dict['annual']     = 0
             temp_dict['outside']    = None
-            temp_dict['statistic']  = None
+            temp_dict['statistic']  = ""
             person['date']['date_' + str(i)] = temp_dict
-        person['late_times']    = 0
-        person['off_time']      = 0
-        person['leave_time']    = 0
-        person['sick_time']     = 0
-        person['last_rest_off'] = 0
-        person['now_rest_off']  = 0
-        person['common']        = 0
+        person['late_time']         = 0.0
+        person['off_time']          = 0.0
+        person['leave_time']        = 0.0
+        person['sick_time']         = 0.0
+        person['annual_time']       = 0.0
+        person['last_rest_off']     = 0.0
+        person['now_rest_off']      = 0.0
+        person['common']            = ""
         
         return person
     

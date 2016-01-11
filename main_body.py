@@ -13,7 +13,10 @@ from datetype import Date
 import StatisticsAttendance
 from StatisticsAttendance import StatisticData
 import xlrd
+import xlwt
 import sys
+from writetable import WriteTable
+from writetable import OpenFileError
 
 class TableObjectEmptyError(Exception):
     '''
@@ -150,6 +153,10 @@ def addPersonLateMinutes(sign_time, fix_sign_time):
     ## 获得规定签到时间元组
     fix_sign_time_tuple = xlrd.xldate_as_tuple(fix_sign_time, 0)
     
+    ## 无签到时间
+    if 6 == sign_time_tuple.count(0):
+        return -1
+    
     sign_minutes = sign_time_tuple[tuple_list.index('hour')]*60 \
         + sign_time_tuple[tuple_list.index('minute')]
     fix_sign_minutes = fix_sign_time_tuple[tuple_list.index('hour')]*60 \
@@ -171,6 +178,10 @@ def addPersonLeaveEarlyMinutes(sign_time, fix_sign_time):
     sign_time_tuple     = xlrd.xldate_as_tuple(sign_time, 0)
     ## 获得规定签退时间
     fix_sign_time_tuple = xlrd.xldate_as_tuple(fix_sign_time, 0) 
+    
+    ## 无签退时间
+    if 6 == sign_time_tuple.count(0):
+        return -1
     
     sign_minutes = sign_time_tuple[tuple_list.index('hour')]*60\
         + sign_time_tuple[tuple_list.index('minute')]
@@ -194,6 +205,204 @@ def addPersonOvertimeNotWorkday(come_time, leave_time):
     leave_minutes = leave_time_tuple[tuple_list.index('hour')]*60 + leave_time_tuple[tuple_list.index('minute')]
     total_minutes = leave_minutes - come_minutes
     return total_minutes
+
+def doPersonStatisticsData(person_list):
+    '''
+    Statistics all kinds of information about the person, such as off, late,
+    absent, sick-absent, and so on. Fill the statistics information to the 
+    specific date field.
+    At last, the person_list which has been upgrated will be returned
+    @ person_list : contains all person information which is dictionary
+    '''
+    ## 复制一份拷贝，以防修改先前的对象
+    import copy
+    person_list_cp = copy.deepcopy(person_list)
+    length_person_list = len(person_list_cp.keys())
+    for key in range(1, length_person_list+1):
+        person = person_list_cp[key]
+        ## 针对每一个人统计
+        work_month = person['month']
+        work_year  = person['year']
+        date       = Date(work_year, work_month, 1)
+        ## 获取当前月有多少天
+        days_has   = date.hasDays()
+        person_off_hours    = 0.0
+        person_late_minutes = {'below_10':0, 'between_10_30':0, 'up_30':""}
+        person_leav_early_minutes = 0.0
+        person_leave_hours  = 0.0
+        person_sick_hours   = 0.0
+        person_annual_hours = 0.0
+        for day in range(1, days_has + 1):
+            ## 调休时间统计
+            off = person['date']['date_'+str(day)]['off']
+            if  float(off) != 0.0:
+                person_off_hours += float(off)
+                person['date']['date_'+str(day)]['statistic'] += u'调'+ str(float(off))
+            ## 事假时间统计
+            leave = person['date']['date_'+str(day)]['leave']
+            if float(leave) != 0.0:
+                person_leave_hours += float(leave)
+                person['date']['date_'+str(day)]['statistic'] += u'事' + str(float(leave))
+            ## 年假时间统计
+            annual = person['date']['date_'+str(day)]['annual']
+            if float(annual) != 0.0:
+                person_annual_hours += float(annual)
+                person['date']['date_'+str(day)]['statistic'] += u'年' + str(float(annual))
+            ## 病假时间统计
+            sick = person['date']['date_'+str(day)]['sick']
+            if float(sick) != 0.0:
+                person_sick_hours += float(sick)
+                person['date']['date_'+str(day)]['statistic'] += u'病' + str(float(sick))
+            ## 早退时间统计
+            leav_early = person['date']['date_'+str(day)]['leav_early']
+            if -1 == leav_early:
+                person['date']['date_'+str(day)]['statistic'] += '[' + u'无签退' + ']' + ' '
+            elif (leav_early*(-1)) > 0.0:
+                person_leav_early_minutes += float(leav_early*(-1))
+                person['date']['date_'+str(day)]['statistic'] += u'早退' + str(float(leav_early*(-1)))
+#                 if leav_early > 500:
+#                     person['common'] += u'\u2660' + str(day)
+            ## 加班时间统计
+            overwork = person['date']['date_'+str(day)]['overwork']
+            if overwork != 0.0:
+                person['date']['date_'+str(day)]['statistic'] += u'加' + str(float(overwork))
+            ## 迟到时间统计
+            late = person['date']['date_'+str(day)]['late']
+            if late > 0.0:
+                if late > 0.0 and late <= 10.0:
+                    person_late_minutes['below_10'] += 1
+                elif late > 10.0 and late < 30.0:
+                    person_late_minutes['between_10_30'] += 1
+                else:
+                    person_late_minutes['up_30'] += u'\u2605' + str(day) + " "
+            elif late == -1:
+                person['date']['date_'+str(day)]['statistic'] += '[' + u'无签到' + ']' + ' '
+            ## 外勤统计       
+            if (person['date']['date_'+str(day)]['outside']) and (Date(work_year, work_month, day).isWeekDay()):
+                person['common'] += '[' + str(day) + ']' + person['date']['date_'+str(day)]['outside'] + ' '
+                            
+            ## 无任何异常情况时显示为正常
+            if off <= 0.0 and leave <= 0.0 and \
+                annual <= 0.0 and sick <= 0.0 and leav_early == 0.0 and\
+                overwork <= 0.0:
+                person['date']['date_'+str(day)]['statistic'] = u'正常'
+        ## 月度情况汇总
+        person['off_time']    = person_off_hours
+        person['leave_time']  = person_leave_hours
+        person['sick_time']   = person_sick_hours
+        person['annual_time'] = person_annual_hours  
+        if person_late_minutes['below_10'] >= 3:
+            person_late_minutes['below_10'] -= 3
+        person['late_time']   = person_late_minutes['below_10'] + person_late_minutes['between_10_30']
+        person['common']      += person_late_minutes['up_30'] + ' '   
+        
+    return person_list_cp   
+
+def generateTableHeader(year, month):
+    '''
+    Generate table header for the file to be written
+    @ year  : the year to be statistic
+    @ month : the month to be statistic
+    '''
+    header = [u'序号', u'姓名', u'入职日期', u'月份']
+    for day in range(1, Date(year, month, 1).hasDays()+1):
+        date = Date(year, month, day)
+        if date.isWeekDay():
+            header.append(day)
+    rest = [u'迟到次数', u'调休', u'事假', u'病假', u'年假', u'截止上月调休结余', u'现结余', u'备注']
+    for item in rest:
+        header.append(item) 
+    
+    return header
+
+def setTableBorders():
+    border = xlwt.Borders()
+    border.top    = 1
+    border.bottom = 1
+    border.left   = 1
+    border.right  = 1
+    
+    return border
+
+def setTableStyle():
+    style = xlwt.XFStyle()
+    style.borders = setTableBorders()
+    
+    ## 设置居中
+    align = xlwt.Alignment()
+    align.horz = xlwt.Alignment.HORZ_CENTER
+    align.vert = xlwt.Alignment.VERT_CENTER
+    style.alignment = align
+    
+    return style
+
+def writePersonDataTable(file_name, person_list, sheet_name = 'Sheet1'):
+    '''
+    Write each person information in the person list to sheet name which has
+    been created in the specific file
+    @ file_name   : the file will be created to save information
+    @ person_list : it contains specific information about each person in the company
+    @ sheet_name  : which sheet will be written to in the file, which has default
+                    name, it is 'Sheet1'
+    '''
+    try:
+        write_table = WriteTable(file_name, sheet_name)
+    except OpenFileError, e:
+        print e.getErrorString()
+    
+    if not person_list:
+        raise TableObjectEmptyError("<writePersonDataTable> : Person list is empty")
+    
+    ## 逐人逐项写入文件
+    if write_table.isTableReady():
+        ## 写入标题
+        header = generateTableHeader(person_list[1]['year'], person_list[2]['month'])
+        write_table.setHHeader(header)
+        
+        style = setTableStyle()
+        ## 写入信息内容
+        for key in sorted(person_list.keys()):
+            ## key可以代表行号, col_index表示列数
+            col_index = 0
+            ## 写序号
+            write_table.setValueWithStyle(key, col_index, person_list[key]['id'], style)
+            ## 写姓名
+            write_table.setValueWithStyle(key, col_index+1, person_list[key]['name'], style)
+            ## 写入职日期
+            pass
+            write_table.setValueWithStyle(key, col_index+2, "", style)
+            ## col_index + 2
+            ## 写月份
+            write_table.setValueWithStyle(key, col_index+3, unicode(person_list[key]['month'])+u'月', style)
+            ##col
+            col_index += 4
+            ## 写入工作日统计情况
+            for day in header[header.index(1) : header.index(u'迟到次数')]:
+                day_date = 'date_' + str(day)
+                write_table.setValueWithStyle(key, col_index, person_list[key]['date'][day_date]['statistic'], style)
+                col_index += 1
+            ## 写入迟到次数
+            write_table.setValueWithStyle(key, col_index, person_list[key]['late_time'], style)
+            ## 写入调休次数
+            write_table.setValueWithStyle(key, col_index+1, person_list[key]['off_time'], style)
+            ## 写入事假时间
+            write_table.setValueWithStyle(key, col_index+2, person_list[key]['leave_time'], style)
+            ## 写入病假时间
+            write_table.setValueWithStyle(key, col_index+3, person_list[key]['sick_time'], style)
+            ## 写入年假时间
+            write_table.setValueWithStyle(key, col_index+4, person_list[key]['annual_time'], style)
+            ## 写入截止上月调休结余
+            pass
+            write_table.setValueWithStyle(key, col_index+5, "", style)
+            ## 写入现结余
+            pass
+            write_table.setValueWithStyle(key, col_index+6, "", style)
+            ## 写入备注
+            write_table.setValueWithStyle(key, col_index+7, person_list[key]['common'], style)
+            
+            write_table.setTableCellHeight(key, 1000)
+        ## 同步写入文件
+        write_table.writeToFile()
 
 ## 主入口程序
 def main():
@@ -256,12 +465,12 @@ def main():
                 ## 非工作日，算加班
                 overtime = addPersonOvertimeNotWorkday(person_dict[u'签到时间'], person_dict[u'签退时间'])
                 person_total_list[person_id]['date']['date_'+str(work_day)]['late'] = 0
-                person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early'] = 0
-                person_total_list[person_id]['date']['date_'+str(work_day)]['off']        = 0
-                person_total_list[person_id]['date']['date_'+str(work_day)]['leave']      = 0
-                person_total_list[person_id]['date']['date_'+str(work_day)]['sick']       = 0
-                person_total_list[person_id]['date']['date_'+str(work_day)]['annual']     = 0
-                person_total_list[person_id]['date']['date_'+str(work_day)]['outside']    = overtime
+                person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early']  = 0
+                person_total_list[person_id]['date']['date_'+str(work_day)]['off']         = 0
+                person_total_list[person_id]['date']['date_'+str(work_day)]['leave']       = 0
+                person_total_list[person_id]['date']['date_'+str(work_day)]['sick']        = 0
+                person_total_list[person_id]['date']['date_'+str(work_day)]['annual']      = 0
+                person_total_list[person_id]['date']['date_'+str(work_day)]['overwork']    = overtime
             else:
                 late_minutes = addPersonLateMinutes(person_dict[u'签到时间'], person_dict[u'规定上班时间'])
                 early_overtime_minutes = addPersonLeaveEarlyMinutes(person_dict[u'签退时间'], person_dict[u'规定下班时间'])
@@ -274,8 +483,8 @@ def main():
                     person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early'] = 0
                 else:
                     ## 早退的情况
-                    person_total_list[person_id]['date']['date_'+str(work_day)]['overwork'] = 0
-                    person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early'] = (early_overtime_minutes * (-1))
+                    person_total_list[person_id]['date']['date_'+str(work_day)]['overwork']   = 0
+                    person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early'] = early_overtime_minutes## (early_overtime_minutes * (-1))
                 
                 ## 事假时间
                 person_total_list[person_id]['date']['date_'+str(work_day)]['leave'] = int(person_dict[u'事假时间'])
@@ -289,22 +498,26 @@ def main():
                     person_total_list[person_id]['date']['date_'+str(work_day)]['annual'] = 0
                 elif u'年假' == absent_reason:
                     person_total_list[person_id]['date']['date_'+str(work_day)]['off']    = 0
-                    person_total_list[person_id]['date']['date_'+str(work_day)]['annual'] = absent_reason
+                    person_total_list[person_id]['date']['date_'+str(work_day)]['annual'] = absent_hour
                 ## 外勤情况
-                person_total_list[person_id]['date']['date_'+str(work_day)]['outside'] = person_dict[u'外勤及其他异常说明']    
+                person_total_list[person_id]['date']['date_'+str(work_day)]['outside'] = person_dict[u'外勤及其他异常说明']
+                
+                ## 上个月调休结余时间（后续需要再补充）
+                pass
+                ## End 上个月调休结余时间    
                 
             if person_id > last_person_id:
                 last_person_id = person_id
         except (TableObjectEmptyError, TableHeaderEmptyError,\
                 TableDataEndError, TableHeaderLengthError) as e:
             print e.getErrorString()
-        ## For debug
-#         print work_day, '~'*60
-#         read_table.displayPersonObj(person_total_list[person_id])
-#         temp += 1
-#         if temp > 22:
-#             break
-    print u'共有%d人'%person_id
+
+    ## 得到汇总后的人员情况字典
+    person_lastest_list = doPersonStatisticsData(person_total_list)
+    ## 将汇总情况写入文件
+    writePersonDataTable(u'测试文件.xls', person_lastest_list)
+    ## read_table.displayPersonObj(person_lastest_list[1])
+    
     ## 打印工具结尾
     StatisticsAttendance.printToolLogoEnd()
 
