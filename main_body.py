@@ -181,7 +181,7 @@ def addPersonLateMinutes(sign_time, fix_sign_time):
         + fix_sign_time_tuple[tuple_list.index('minute')]
     total_minutes = sign_minutes - fix_sign_minutes
     if total_minutes >= 0:
-        return total_minutes
+        return '%.1f'%(float(total_minutes)/60.0)
     else:
         return 0
     
@@ -206,7 +206,7 @@ def addPersonLeaveEarlyMinutes(sign_time, fix_sign_time):
     fix_sign_minutes = fix_sign_time_tuple[tuple_list.index('hour')]*60\
         + fix_sign_time_tuple[tuple_list.index('minute')]
     total_minutes = sign_minutes - fix_sign_minutes
-    return total_minutes
+    return '%.1f'%(float(total_minutes)/60.0)
 
 def addPersonOvertimeNotWorkday(come_time, leave_time):
     '''
@@ -386,8 +386,8 @@ def doPersonRegisterSignoutHeader(sheet_obj, year, month):
     
     ## 写表头    
     sheet_obj.write_merge(0, 1, 0, 0, u'姓名', style)
-    for i in range(1, date.hasDays()):
-        sheet_obj.write_merge(0, 0, 2*i-1, 2*i, header[i], style)
+    for i in range(1, date.hasDays()+1):
+        sheet_obj.write_merge(0, 0, 2*i-1, 2*i, header[i-1], style)
         sheet_obj.write(1, 2*i-1, item[0], style)
         sheet_obj.write(1, 2*i, item[1], style)
     
@@ -406,22 +406,48 @@ def doPersonRegisterSignoutTimeData(sheet_obj, person_list):
     if not person_list:
         print '[*] Person list should not be None'
         return 
-     
+    ## 写入标题
     start_row_index, sheet_obj = doPersonRegisterSignoutHeader(sheet_obj, person_list[1]['year'], person_list[1]['month'])
     
     date = Date(person_list[1]['year'], person_list[1]['month'], 1)
     person_counters = 0
+    
+    ## 设置格式
+    style       = setTableStyle()
+    font        = xlwt.Font()
+    font.name   = u'微软雅黑'
+    font.height = 200
+    style.font = font
+    
+    ## 设置异常样式
+    style_exception                 = xlwt.XFStyle()
+    pattern_exp                     = xlwt.Pattern()
+    pattern_exp.pattern             = pattern_exp.SOLID_PATTERN
+    pattern_exp.pattern_fore_colour = 3
+    align_exp                       = xlwt.Alignment()
+    align_exp.horz                  = xlwt.Alignment.HORZ_CENTER
+    align_exp.vert                  = xlwt.Alignment.VERT_CENTER
+    style_exception.pattern         = pattern_exp
+    style_exception.borders         = setTableBorders()
+    style_exception.alignment       = align_exp
+    
+    ## 按每个人写入
     for key in sorted(person_list.keys()):
         ## 填充姓名
-        sheet_obj.write(start_row_index+person_counters, 0, person_list[key]['name'])
+        sheet_obj.write(start_row_index+person_counters, 0, person_list[key]['name'], style)
         
         for day in range(1, date.hasDays()+1):
             ## 填充上班时间
-            sheet_obj.write(start_row_index+person_counters, 2*day-1, person_list[key]['date']['date_'+str(day)]['register'])
+            if 'NULL' != person_list[key]['date']['date_'+str(day)]['register']:
+                sheet_obj.write(start_row_index+person_counters, 2*day-1, person_list[key]['date']['date_'+str(day)]['register'], style)
+            else:
+                sheet_obj.write(start_row_index+person_counters, 2*day-1, '', style_exception)
         
             ## 填充下班时间
-            sheet_obj.write(start_row_index+person_counters, 2*day, person_list[key]['date']['date_'+str(day)]['sign_out'])
-        
+            if 'NULL' != person_list[key]['date']['date_'+str(day)]['sign_out']:
+                sheet_obj.write(start_row_index+person_counters, 2*day, person_list[key]['date']['date_'+str(day)]['sign_out'], style)
+            else:
+                sheet_obj.write(start_row_index+person_counters, 2*day, '', style_exception)
         person_counters += 1
     
 def writePersonDataTable(file_name, person_list, sheet_name_list):
@@ -497,12 +523,6 @@ def writePersonDataTable(file_name, person_list, sheet_name_list):
                 print '[*] Add second sheet failed'
             else:
                 doPersonRegisterSignoutTimeData(new_sheet_obj, person_list)
-#                 new_sheet_obj.write(0, 0, u'哈哈')
-#                 new_sheet_obj.write_merge(0, 1, 0, 0, u'姓名')
-#                 new_sheet_obj.write_merge(0, 0, 1, 2, u'1日')
-#                 new_sheet_obj.write(1, 1, u'上班')
-#                 new_sheet_obj.write(1, 2, u'下班')
-#                 new_sheet_obj.write_merge(0, 3, 0, 4, u'2日')
         except writetable.SheetNameError, e:
             print e.getErrorString()
             
@@ -590,7 +610,7 @@ def main():
                 ## 迟到时间
                 person_total_list[person_id]['date']['date_'+str(work_day)]['late'] = late_minutes
                 
-                if early_overtime_minutes > 0:
+                if early_overtime_minutes > 0.0:
                     ## 加班的情况
                     person_total_list[person_id]['date']['date_'+str(work_day)]['overwork']   = early_overtime_minutes
                     person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early'] = 0
