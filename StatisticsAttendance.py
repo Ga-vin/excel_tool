@@ -152,6 +152,8 @@ class StatisticData(TableView):
         for i in range(1, 32):
             temp_dict               = dict()
             temp_dict['late']       = 0
+            temp_dict['register']   = ""
+            temp_dict['sign_out']   = ""
             temp_dict['overwork']   = 0
             temp_dict['leav_early'] = 0
             temp_dict['off']        = 0

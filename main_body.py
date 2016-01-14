@@ -9,12 +9,14 @@
     @License: (C)GPL
 '''
 ## ----------------------------------------------------------------------
+import datetype
 from datetype import Date
 import StatisticsAttendance
 from StatisticsAttendance import StatisticData
 import xlrd
 import xlwt
 import sys
+import writetable
 from writetable import WriteTable
 from writetable import OpenFileError
 
@@ -141,6 +143,22 @@ def addPersonDate(date_string, split_char = '/'):
         return None
     return date_obj
 
+def getPersonRegisterAndSignoutTime(register_time):
+    '''
+    Get the register and sign out time for the person
+    @  register_time : register or sign out time date of xlrd-type for the person
+    @ Return the string of register or sign out time for the person
+    '''
+    tuple_list = ['year', 'month', 'day', 'hour', 'minute', 'second']
+    register_time_tuple = xlrd.xldate_as_tuple(register_time, 0)
+    ## 无签到/签退时间
+    if 6 == register_time_tuple.count(0):
+        return "NULL"
+    
+    return "%d:%d:%d" % (int(register_time_tuple[tuple_list.index('hour')]),
+                             int(register_time_tuple[tuple_list.index('minute')]),
+                             int(register_time_tuple[tuple_list.index('second')]))
+
 def addPersonLateMinutes(sign_time, fix_sign_time):
     '''
     Calculate the minutes for the person has been late
@@ -264,8 +282,8 @@ def doPersonStatisticsData(person_list):
 #                     person['common'] += u'\u2660' + str(day)
             ## 加班时间统计
             overwork = person['date']['date_'+str(day)]['overwork']
-            if overwork != 0.0:
-                person['date']['date_'+str(day)]['statistic'] += u'加' + str(float(overwork))
+#             if overwork != 0.0:
+#                 person['date']['date_'+str(day)]['statistic'] += u'加' + str(float(overwork))
             ## 迟到时间统计
             late = person['date']['date_'+str(day)]['late']
             if late > 0.0:
@@ -282,9 +300,8 @@ def doPersonStatisticsData(person_list):
                 person['common'] += '[' + str(day) + ']' + person['date']['date_'+str(day)]['outside'] + ' '
                             
             ## 无任何异常情况时显示为正常
-            if off <= 0.0 and leave <= 0.0 and \
-                annual <= 0.0 and sick <= 0.0 and leav_early == 0.0 and\
-                overwork <= 0.0:
+            if off == 0.0 and leave == 0.0 and \
+                annual == 0.0 and sick == 0.0 and leav_early == 0.0:
                 person['date']['date_'+str(day)]['statistic'] = u'正常'
         ## 月度情况汇总
         person['off_time']    = person_off_hours
@@ -336,7 +353,78 @@ def setTableStyle():
     
     return style
 
-def writePersonDataTable(file_name, person_list, sheet_name = 'Sheet1'):
+def doPersonRegisterSignoutHeader(sheet_obj, year, month):
+    '''
+    Fill register and sign out time sheet header title
+    @ sheet_obj : The sheet object to write data
+    @ year      : The year to statistic
+    @ month     : The month to statistic
+    '''
+    if not sheet_obj:
+        raise writetable.SheetNameError("<doPersonRegisterSignoutHeader> : sheet object should not be None")
+    
+    if year <= 0:
+        raise datetype.DateInvalidError("<doPersonRegisterSignoutHeader> : Year should not be less than 0")
+    
+    if month <= 0 or month > 12:
+        raise datetype.DateInvalidError("<doPersonRegisterSignoutHeader> : Month should be between 1 and 12")
+    
+    ## 填充表头
+    date = Date(year, month, 1)
+    header = []
+    for day in range(1, date.hasDays()+1):
+        header.append(str(day)+u'日')
+    item   = [u'上班', u'下班']
+
+    ## 设置格式
+    style       = setTableStyle()
+    font        = xlwt.Font()
+    font.name   = u'微软雅黑'
+    font.height = 300
+    font.bold   = True
+    style.font = font
+    
+    ## 写表头    
+    sheet_obj.write_merge(0, 1, 0, 0, u'姓名', style)
+    for i in range(1, date.hasDays()):
+        sheet_obj.write_merge(0, 0, 2*i-1, 2*i, header[i], style)
+        sheet_obj.write(1, 2*i-1, item[0], style)
+        sheet_obj.write(1, 2*i, item[1], style)
+    
+    return (2, sheet_obj)
+    
+    
+def doPersonRegisterSignoutTimeData(sheet_obj, person_list):
+    '''
+    Fill register and sign out time for the person in one month
+    @ sheet_obj   : The sheet object to write data
+    @ person_list : The person information list
+    '''
+    if not sheet_obj:
+        raise writetable.SheetNameError("<doPersonRegisterSignoutTimeData> : sheet object should not be None")
+    
+    if not person_list:
+        print '[*] Person list should not be None'
+        return 
+     
+    start_row_index, sheet_obj = doPersonRegisterSignoutHeader(sheet_obj, person_list[1]['year'], person_list[1]['month'])
+    
+    date = Date(person_list[1]['year'], person_list[1]['month'], 1)
+    person_counters = 0
+    for key in sorted(person_list.keys()):
+        ## 填充姓名
+        sheet_obj.write(start_row_index+person_counters, 0, person_list[key]['name'])
+        
+        for day in range(1, date.hasDays()+1):
+            ## 填充上班时间
+            sheet_obj.write(start_row_index+person_counters, 2*day-1, person_list[key]['date']['date_'+str(day)]['register'])
+        
+            ## 填充下班时间
+            sheet_obj.write(start_row_index+person_counters, 2*day, person_list[key]['date']['date_'+str(day)]['sign_out'])
+        
+        person_counters += 1
+    
+def writePersonDataTable(file_name, person_list, sheet_name_list):
     '''
     Write each person information in the person list to sheet name which has
     been created in the specific file
@@ -346,7 +434,7 @@ def writePersonDataTable(file_name, person_list, sheet_name = 'Sheet1'):
                     name, it is 'Sheet1'
     '''
     try:
-        write_table = WriteTable(file_name, sheet_name)
+        write_table = WriteTable(file_name, sheet_name_list[0])
     except OpenFileError, e:
         print e.getErrorString()
     
@@ -401,10 +489,29 @@ def writePersonDataTable(file_name, person_list, sheet_name = 'Sheet1'):
             write_table.setValueWithStyle(key, col_index+7, person_list[key]['common'], style)
             
             write_table.setTableCellHeight(key, 1000)
+        
+        ## 写入第二个表单——签到和签退时间统计
+        try:
+            new_sheet_obj = write_table.addSheetByName(sheet_name_list[1])
+            if not new_sheet_obj:
+                print '[*] Add second sheet failed'
+            else:
+                doPersonRegisterSignoutTimeData(new_sheet_obj, person_list)
+#                 new_sheet_obj.write(0, 0, u'哈哈')
+#                 new_sheet_obj.write_merge(0, 1, 0, 0, u'姓名')
+#                 new_sheet_obj.write_merge(0, 0, 1, 2, u'1日')
+#                 new_sheet_obj.write(1, 1, u'上班')
+#                 new_sheet_obj.write(1, 2, u'下班')
+#                 new_sheet_obj.write_merge(0, 3, 0, 4, u'2日')
+        except writetable.SheetNameError, e:
+            print e.getErrorString()
+            
         ## 同步写入文件
         write_table.writeToFile()
+        
 
 ## 主入口程序
+##def main(write_file_name, write_sheet_name):
 def main():
     read_table_name       = "record_total.xlsx"
     read_table_sheet_name = "specific"
@@ -463,8 +570,10 @@ def main():
             work_day = date_temp.getDay()
             if not date_temp.isWeekDay():
                 ## 非工作日，算加班
+                person_total_list[person_id]['date']['date_'+str(work_day)]['register']    = getPersonRegisterAndSignoutTime(person_dict[u'签到时间'])
+                person_total_list[person_id]['date']['date_'+str(work_day)]['sign_time']   = getPersonRegisterAndSignoutTime(person_dict[u'签退时间'])
                 overtime = addPersonOvertimeNotWorkday(person_dict[u'签到时间'], person_dict[u'签退时间'])
-                person_total_list[person_id]['date']['date_'+str(work_day)]['late'] = 0
+                person_total_list[person_id]['date']['date_'+str(work_day)]['late']        = 0
                 person_total_list[person_id]['date']['date_'+str(work_day)]['leav_early']  = 0
                 person_total_list[person_id]['date']['date_'+str(work_day)]['off']         = 0
                 person_total_list[person_id]['date']['date_'+str(work_day)]['leave']       = 0
@@ -472,6 +581,10 @@ def main():
                 person_total_list[person_id]['date']['date_'+str(work_day)]['annual']      = 0
                 person_total_list[person_id]['date']['date_'+str(work_day)]['overwork']    = overtime
             else:
+                ## 签到/签退时间
+                person_total_list[person_id]['date']['date_'+str(work_day)]['register'] = getPersonRegisterAndSignoutTime(person_dict[u'签到时间'])
+                person_total_list[person_id]['date']['date_'+str(work_day)]['sign_out'] = getPersonRegisterAndSignoutTime(person_dict[u'签退时间'])
+                
                 late_minutes = addPersonLateMinutes(person_dict[u'签到时间'], person_dict[u'规定上班时间'])
                 early_overtime_minutes = addPersonLeaveEarlyMinutes(person_dict[u'签退时间'], person_dict[u'规定下班时间'])
                 ## 迟到时间
@@ -515,11 +628,13 @@ def main():
     ## 得到汇总后的人员情况字典
     person_lastest_list = doPersonStatisticsData(person_total_list)
     ## 将汇总情况写入文件
-    writePersonDataTable(u'测试文件.xls', person_lastest_list)
+    writePersonDataTable(u'测试文件.xls', person_lastest_list, [u'事项统计', u'上下班时间统计'])
     ## read_table.displayPersonObj(person_lastest_list[1])
     
     ## 打印工具结尾
     StatisticsAttendance.printToolLogoEnd()
+    
+    return True
 
 if __name__ == "__main__":
     main()

@@ -104,7 +104,7 @@ class WriteTable(object):
         index = 0
         for item in header:
             self.sheet_obj.write(0, index, item, style)
-            self.sheet_obj.col(index).width = 256 * 15
+            self.sheet_obj.col(index).width = 256 * 20
             index += 1
         self.sheet_obj.col(index-1).width = 256 * 65
             
@@ -153,6 +153,20 @@ class WriteTable(object):
         @ style : the style to set table
         '''
         self.sheet_obj.write(row, col, value, style)
+        
+    def addSheetByName(self, sheet_name):
+        '''
+        Add sheet to the existed file
+        @ sheet_name : the specific name of sheet to add to the file
+        '''
+        if not sheet_name:
+            raise SheetNameError("<addSheetByName> : Sheet name should not be empty")
+        
+        if self.work_book:
+            new_sheet_obj = self.work_book.add_sheet(sheet_name, cell_overwrite_ok = True)
+            return new_sheet_obj
+        else:
+            return None
         
 def main():
     write_file = WriteTable("test.xls", "Test")
